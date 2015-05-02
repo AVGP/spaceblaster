@@ -1,0 +1,24 @@
+{
+  "name": "space-blaster",
+  "version": "1.0.0",
+  "description": "A space rail shooting game",
+  "main": "index.js",
+  "scripts": {
+    "build": "browserify js/main.js | uglifyjs -mc > app.js",
+    "dev": "watchify js/main.js -v -o app.js"
+  },
+  "author": "Martin Naumann <martin@geekonaut.de>",
+  "license": "ISC",
+  "devDependencies": {
+    "browserify": "^8.1.0",
+    "uglify-js": "^2.4.16",
+    "watchify": "^2.2.1"
+  },
+  "dependencies": {
+    "three": "^0.70.0",
+    "three-world": "^2.0.2",
+    "tween": "^0.9.0",
+    "leapjs": "^0.6.4",
+    "leapjs-plugins": "git://github.com:AVGP/leapjs-plugins.git#npm-fix"
+  }
+}

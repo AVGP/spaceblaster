@@ -1,5 +1,6 @@
 var World = require('three-world'),
-THREE = require('three')
+THREE = require('three'),
+ObjMtlLoader = require('./objmtlloader')
 
 function render() {
 }
@@ -19,6 +20,17 @@ var tunnel = new THREE.Mesh(
 )
 tunnel.rotation.x = -Math.PI/2
 World.add(tunnel)
+
+var loader = new ObjMtlLoader(),
+    player = null
+
+loader.load('models/spaceship.obj', 'models/spaceship.mtl', function(mesh) {
+  mesh.scale.set(0.2, 0.2, 0.2)
+  mesh.rotation.set(0, Math.PI, 0)
+  player = mesh
+  player.position.set(0, -25, 0)
+  World.add(player)
+})
 
 World.getScene().fog = new THREE.FogExp2(0x0000022, 0.00125)
 

@@ -1,17 +1,31 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var World = require('three-world')
+var World = require('three-world'),
+THREE = require('three')
 
 function render() {
-  // here we'll update the world on each frame
 }
 
-World.init({ renderCallback: render })
+World.init({ renderCallback: render, clearColor: 0x000022})
 
-// Things will be put into the world here
+var tunnel = new THREE.Mesh(
+  new THREE.CylinderGeometry(100, 100, 5000, 24, 24, true),
+  new THREE.MeshBasicMaterial({
+    map: THREE.ImageUtils.loadTexture('images/space.jpg', null, function(tex) {
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping
+      tex.repeat.set(5, 10)
+      tex.needsUpdate = true
+    }),
+    side: THREE.BackSide
+  })
+)
+tunnel.rotation.x = -Math.PI/2
+World.add(tunnel)
+
+World.getScene().fog = new THREE.FogExp2(0x0000022, 0.00125)
 
 World.start()
 
-},{"three-world":2}],2:[function(require,module,exports){
+},{"three":3,"three-world":2}],2:[function(require,module,exports){
 var THREE = require('three');
 
 var World = (function() {

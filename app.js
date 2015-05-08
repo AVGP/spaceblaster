@@ -1,12 +1,14 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var World = require('three-world'),
-THREE = require('three'),
-ObjMtlLoader = require('./objmtlloader')
+var World  = require('three-world'),
+    THREE  = require('three'),
+    Player = require('./player')
 
 function render() {
+  cam.position.z -= 1;
 }
 
 World.init({ renderCallback: render, clearColor: 0x000022})
+var cam = World.getCamera()
 
 var tunnel = new THREE.Mesh(
   new THREE.CylinderGeometry(100, 100, 5000, 24, 24, true),
@@ -22,22 +24,14 @@ var tunnel = new THREE.Mesh(
 tunnel.rotation.x = -Math.PI/2
 World.add(tunnel)
 
-var loader = new ObjMtlLoader(),
-    player = null
-
-loader.load('models/spaceship.obj', 'models/spaceship.mtl', function(mesh) {
-  mesh.scale.set(0.2, 0.2, 0.2)
-  mesh.rotation.set(0, Math.PI, 0)
-  player = mesh
-  player.position.set(0, -25, 0)
-  World.add(player)
-})
+var player = new Player(cam)
+World.add(cam)
 
 World.getScene().fog = new THREE.FogExp2(0x0000022, 0.00125)
 
 World.start()
 
-},{"./objmtlloader":3,"three":5,"three-world":4}],2:[function(require,module,exports){
+},{"./player":4,"three":6,"three-world":5}],2:[function(require,module,exports){
 /**
  * Loads a Wavefront .mtl file specifying materials
  *
@@ -474,7 +468,7 @@ MTLLoader.nextHighestPowerOfTwo_ = function( x ) {
 
 THREE.EventDispatcher.prototype.apply( MTLLoader.prototype );
 
-},{"three":5}],3:[function(require,module,exports){
+},{"three":6}],3:[function(require,module,exports){
 /**
  * Loads a Wavefront .obj file with materials
  *
@@ -845,7 +839,34 @@ OBJMTLLoader.prototype = {
 
 THREE.EventDispatcher.prototype.apply( OBJMTLLoader.prototype );
 
-},{"./mtlloader":2,"three":5}],4:[function(require,module,exports){
+},{"./mtlloader":2,"three":6}],4:[function(require,module,exports){
+var ObjMtlLoader = require('./objmtlloader'),
+    loader = new ObjMtlLoader()
+
+var spaceship = null
+
+var Player = function(parent) {
+  this.loaded = false
+  var self = this
+
+  if(spaceship === null) {
+    loader.load('models/spaceship.obj', 'models/spaceship.mtl', function(mesh) {
+      mesh.scale.set(0.2, 0.2, 0.2)
+      mesh.rotation.set(0, Math.PI, 0)
+      spaceship = mesh
+      spaceship.position.set(0, -25, -100)
+      parent.add(spaceship.clone())
+      self.loaded = true
+    })
+  } else {
+    parent.add(spaceship.clone())
+    self.loaded = true
+  }
+}
+
+module.exports = Player
+
+},{"./objmtlloader":3}],5:[function(require,module,exports){
 var THREE = require('three');
 
 var World = (function() {
@@ -940,7 +961,7 @@ var World = (function() {
 
 module.exports = World;
 
-},{"three":5}],5:[function(require,module,exports){
+},{"three":6}],6:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**

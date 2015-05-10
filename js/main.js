@@ -4,7 +4,8 @@ var World  = require('three-world'),
     Player = require('./player')
 
 function render() {
-  cam.position.z -= 1;
+  cam.position.z -= 1
+  tunnel.update(cam.position.z)
 }
 
 World.init({ renderCallback: render, clearColor: 0x000022})

@@ -11,12 +11,14 @@ function render() {
   cam.position.z -= 1
   tunnel.update(cam.position.z)
   player.update()
+
   for(var i=0; i<shots.length; i++) {
     if(!shots[i].update(cam.position.z)) {
       World.getScene().remove(shots[i].getMesh())
       shots.splice(i, 1)
     }
   }
+
   for(var i=0; i<NUM_ASTEROIDS; i++) {
     if(!asteroids[i].loaded) continue
 
@@ -30,9 +32,10 @@ function render() {
         window.location.reload()
       }
     }
+
     for(var j=0; j<shots.length; j++) {
       if(asteroids[i].bbox.isIntersectionBox(shots[j].bbox)) {
-        asteroids[i].reset()
+        asteroids[i].reset(cam.position.z)
         World.getScene().remove(shots[j].getMesh())
         shots.splice(j, 1)
         break
@@ -64,10 +67,28 @@ World.getScene().fog = new THREE.FogExp2(0x0000022, 0.00125)
 World.start()
 
 window.addEventListener('keyup', function(e) {
-  var shipPosition = cam.position.clone()
-  shipPosition.sub(new THREE.Vector3(0, 25, 100))
+  switch(e.keyCode) {
+    case 32: // Space
+      var shipPosition = cam.position.clone()
+      shipPosition.sub(new THREE.Vector3(0, 25, 100))
 
-  var shot = new Shot(shipPosition)
-  shots.push(shot)
-  World.add(shot.getMesh())
+      var shot = new Shot(shipPosition)
+      shots.push(shot)
+      World.add(shot.getMesh())
+    break
+  }
+})
+
+window.addEventListener('keydown', function(e) {
+  if(e.keyCode == 37) {
+    cam.position.x -= 5
+  } else if(e.keyCode == 39) {
+    cam.position.x += 5
+  }
+
+  if(e.keyCode == 38) {
+    cam.position.y += 5
+  } else if(e.keyCode == 40) {
+    cam.position.y -= 5
+  }
 })

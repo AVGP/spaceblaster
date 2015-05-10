@@ -26,6 +26,7 @@ function render() {
     if(player.loaded && player.bbox.isIntersectionBox(asteroids[i].bbox)) {
       asteroids[i].reset(cam.position.z)
       health -= 20
+      document.getElementById("health").textContent = health
       if(health < 1) {
         World.pause()
         alert("Game over")
@@ -35,6 +36,8 @@ function render() {
 
     for(var j=0; j<shots.length; j++) {
       if(asteroids[i].bbox.isIntersectionBox(shots[j].bbox)) {
+        score += 10
+        document.getElementById("score").textContent = score
         asteroids[i].reset(cam.position.z)
         World.getScene().remove(shots[j].getMesh())
         shots.splice(j, 1)
@@ -44,7 +47,7 @@ function render() {
   }
 }
 
-var health = 100
+var health = 100, score = 0
 
 World.init({ renderCallback: render, clearColor: 0x000022})
 var cam = World.getCamera()

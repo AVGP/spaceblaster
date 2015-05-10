@@ -8,11 +8,13 @@ var rockMtl = new THREE.MeshLambertMaterial({
 })
 
 var Asteroid = function(rockType) {
-  var mesh = new THREE.Object3D()
+  var mesh = new THREE.Object3D(), self = this
 
   // Speed of motion and rotation
   mesh.velocity = Math.random() * 2 + 2
   mesh.vRotation = new THREE.Vector3(Math.random(), Math.random(), Math.random())
+
+  this.bbox = new THREE.Box3()
 
   loader.load('models/rock' + rockType + '.obj', function(obj) {
     obj.traverse(function(child) {
@@ -25,7 +27,15 @@ var Asteroid = function(rockType) {
 
     mesh.add(obj)
     mesh.position.set(-50 + Math.random() * 100, -50 + Math.random() * 100, -1500 - Math.random() * 1500)
+
+    self.bbox.setFromObject(obj)
+    self.loaded = true
   })
+
+  this.reset = function(z) {
+    mesh.velocity = Math.random() * 2 + 2
+    mesh.position.set(-50 + Math.random() * 100, -50 + Math.random() * 100, z - 1500 - Math.random() * 1500)
+  }
 
   this.update = function(z) {
     mesh.position.z += mesh.velocity
@@ -33,9 +43,10 @@ var Asteroid = function(rockType) {
     mesh.rotation.y += mesh.vRotation.y * 0.02;
     mesh.rotation.z += mesh.vRotation.z * 0.02;
 
+    if(mesh.children.length > 0) this.bbox.setFromObject(mesh.children[0])
+
     if(mesh.position.z > z) {
-      mesh.velocity = Math.random() * 2 + 2
-      mesh.position.set(-50 + Math.random() * 100, -50 + Math.random() * 100, z - 1500 - Math.random() * 1500)
+      this.reset(z)
     }
   }
 
@@ -48,20 +59,51 @@ var Asteroid = function(rockType) {
 
 module.exports = Asteroid
 
-},{"./objloader":4,"three":9}],2:[function(require,module,exports){
+},{"./objloader":4,"three":10}],2:[function(require,module,exports){
 var World = require('three-world'),
     THREE = require('three'),
     Tunnel = require('./tunnel'),
     Player = require('./player'),
-    Asteroid = require('./asteroid')
+    Asteroid = require('./asteroid'),
+    Shot = require('./shot')
 
 var NUM_ASTEROIDS = 10
 
 function render() {
   cam.position.z -= 1
   tunnel.update(cam.position.z)
-  for(var i=0;i<NUM_ASTEROIDS;i++) asteroids[i].update(cam.position.z)
+  player.update()
+  for(var i=0; i<shots.length; i++) {
+    if(!shots[i].update(cam.position.z)) {
+      World.getScene().remove(shots[i].getMesh())
+      shots.splice(i, 1)
+    }
+  }
+  for(var i=0; i<NUM_ASTEROIDS; i++) {
+    if(!asteroids[i].loaded) continue
+
+    asteroids[i].update(cam.position.z)
+    if(player.loaded && player.bbox.isIntersectionBox(asteroids[i].bbox)) {
+      asteroids[i].reset(cam.position.z)
+      health -= 20
+      if(health < 1) {
+        World.pause()
+        alert("Game over")
+        window.location.reload()
+      }
+    }
+    for(var j=0; j<shots.length; j++) {
+      if(asteroids[i].bbox.isIntersectionBox(shots[j].bbox)) {
+        asteroids[i].reset()
+        World.getScene().remove(shots[j].getMesh())
+        shots.splice(j, 1)
+        break
+      }
+    }
+  }
 }
+
+var health = 100
 
 World.init({ renderCallback: render, clearColor: 0x000022})
 var cam = World.getCamera()
@@ -72,10 +114,10 @@ World.add(tunnel.getMesh())
 var player = new Player(cam)
 World.add(cam)
 
-var asteroids = []
+var asteroids = [], shots = []
 
 for(var i=0;i<NUM_ASTEROIDS; i++) {
-  asteroids.push(new Asteroid(Math.floor(Math.random() * 7) + 1))
+  asteroids.push(new Asteroid(Math.floor(Math.random() * 5) + 1))
   World.add(asteroids[i].getMesh())
 }
 
@@ -83,7 +125,16 @@ World.getScene().fog = new THREE.FogExp2(0x0000022, 0.00125)
 
 World.start()
 
-},{"./asteroid":1,"./player":6,"./tunnel":7,"three":9,"three-world":8}],3:[function(require,module,exports){
+window.addEventListener('keyup', function(e) {
+  var shipPosition = cam.position.clone()
+  shipPosition.sub(new THREE.Vector3(0, 25, 100))
+
+  var shot = new Shot(shipPosition)
+  shots.push(shot)
+  World.add(shot.getMesh())
+})
+
+},{"./asteroid":1,"./player":6,"./shot":7,"./tunnel":8,"three":10,"three-world":9}],3:[function(require,module,exports){
 /**
  * Loads a Wavefront .mtl file specifying materials
  *
@@ -520,7 +571,7 @@ MTLLoader.nextHighestPowerOfTwo_ = function( x ) {
 
 THREE.EventDispatcher.prototype.apply( MTLLoader.prototype );
 
-},{"three":9}],4:[function(require,module,exports){
+},{"three":10}],4:[function(require,module,exports){
 /**
  * @author mrdoob / http://mrdoob.com/
  */
@@ -897,7 +948,7 @@ OBJLoader.prototype = {
 
 module.exports = OBJLoader;
 
-},{"three":9}],5:[function(require,module,exports){
+},{"three":10}],5:[function(require,module,exports){
 /**
  * Loads a Wavefront .obj file with materials
  *
@@ -1268,15 +1319,18 @@ OBJMTLLoader.prototype = {
 
 THREE.EventDispatcher.prototype.apply( OBJMTLLoader.prototype );
 
-},{"./mtlloader":3,"three":9}],6:[function(require,module,exports){
-var ObjMtlLoader = require('./objmtlloader'),
+},{"./mtlloader":3,"three":10}],6:[function(require,module,exports){
+var THREE = require('three')
+    ObjMtlLoader = require('./objmtlloader'),
     loader = new ObjMtlLoader()
 
 var spaceship = null
 
 var Player = function(parent) {
   this.loaded = false
-  var self = this
+  var self = this, spaceship = null
+
+  self.bbox = new THREE.Box3()
 
   if(spaceship === null) {
     loader.load('models/spaceship.obj', 'models/spaceship.mtl', function(mesh) {
@@ -1284,18 +1338,63 @@ var Player = function(parent) {
       mesh.rotation.set(0, Math.PI, 0)
       spaceship = mesh
       spaceship.position.set(0, -25, -100)
-      parent.add(spaceship.clone())
+      parent.add(spaceship)
       self.loaded = true
+      self.bbox.setFromObject(spaceship)
     })
   } else {
-    parent.add(spaceship.clone())
+    parent.add(spaceship)
     self.loaded = true
+  }
+
+  this.update = function() {
+    if(!spaceship) return
+    this.bbox.setFromObject(spaceship)
   }
 }
 
 module.exports = Player
 
-},{"./objmtlloader":5}],7:[function(require,module,exports){
+},{"./objmtlloader":5,"three":10}],7:[function(require,module,exports){
+var THREE = require('three')
+
+var shotMtl = new THREE.MeshBasicMaterial({
+  color: 0xff0000,
+  transparent: true,
+  opacity: 0.5
+})
+
+var Shot = function(initialPos) {
+  this.mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(3, 16, 16),
+    shotMtl
+  )
+  this.mesh.position.copy(initialPos)
+
+  this.bbox = new THREE.Box3()
+
+  this.getMesh = function() {
+    return this.mesh
+  }
+
+  this.update = function(z) {
+    this.mesh.position.z -= 10
+    this.bbox.setFromObject(this.mesh)
+
+    if(Math.abs(this.mesh.position.z - z) > 1000) {
+      return false
+      delete this.mesh
+    }
+
+    return true
+  }
+
+  return this
+}
+
+module.exports = Shot
+
+},{"three":10}],8:[function(require,module,exports){
 var THREE = require('three')
 
 var Tunnel = function() {
@@ -1338,7 +1437,7 @@ var Tunnel = function() {
 
 module.exports = Tunnel
 
-},{"three":9}],8:[function(require,module,exports){
+},{"three":10}],9:[function(require,module,exports){
 var THREE = require('three');
 
 var World = (function() {
@@ -1433,7 +1532,7 @@ var World = (function() {
 
 module.exports = World;
 
-},{"three":9}],9:[function(require,module,exports){
+},{"three":10}],10:[function(require,module,exports){
 var self = self || {};// File:src/Three.js
 
 /**
